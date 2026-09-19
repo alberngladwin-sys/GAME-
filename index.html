@@ -91,6 +91,21 @@
       background: #1d4ed8;
     }
 
+    .button-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #musicBtn {
+      background: #7c3aed;
+    }
+
+    #musicBtn:hover {
+      background: #6d28d9;
+    }
+
     .instructions {
       margin-top: 18px;
       font-size: 14px;
@@ -122,7 +137,10 @@
 
     <div class="message" id="message"></div>
 
-    <button onclick="restartGame()">Restart Game</button>
+    <div class="button-row">
+      <button onclick="restartGame()">Restart Game</button>
+      <button id="musicBtn" onclick="toggleMusic()">🎵 Music: Off</button>
+    </div>
 
     <div class="instructions">
       Press Enter after typing each word.
@@ -197,6 +215,76 @@
         newWord();
       }
     });
+
+    let audioContext = null;
+    let musicTimer = null;
+    let musicPlaying = false;
+    let noteIndex = 0;
+
+    const melody = [
+      261.63, 329.63, 392.00, 329.63,
+      293.66, 349.23, 440.00, 349.23,
+      329.63, 392.00, 493.88, 392.00,
+      293.66, 349.23, 440.00, 349.23
+    ];
+
+    function playNote(frequency) {
+      if (!audioContext) return;
+
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.055, audioContext.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.28);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    function startMusic() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      if (musicTimer) clearInterval(musicTimer);
+
+      playNote(melody[noteIndex]);
+      noteIndex = (noteIndex + 1) % melody.length;
+
+      musicTimer = setInterval(() => {
+        playNote(melody[noteIndex]);
+        noteIndex = (noteIndex + 1) % melody.length;
+      }, 350);
+
+      musicPlaying = true;
+      document.getElementById("musicBtn").textContent = "🔇 Music: On";
+    }
+
+    function stopMusic() {
+      clearInterval(musicTimer);
+      musicTimer = null;
+      musicPlaying = false;
+      document.getElementById("musicBtn").textContent = "🎵 Music: Off";
+    }
+
+    function toggleMusic() {
+      if (musicPlaying) {
+        stopMusic();
+      } else {
+        startMusic();
+      }
+    }
 
     function restartGame() {
       score = 0;
